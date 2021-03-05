@@ -58,13 +58,13 @@ func GetCodeOwner(wg *sync.WaitGroup, c chan int, ctx *context.Context, client *
 			log.Printf("CODEOWNERS does not exist in '%s' repo", repo)
 			url := fmt.Sprintf("https://%s.com/%s/%s", site, owner, repo)
 			resultDict[url] = "None"
-		} else {
+		} else if err == nil {
 			// Read the response and construct to string
 			if b, err := ioutil.ReadAll(resp); err == nil {
 				ParseCodeOwners(&b, repo, knownUsers, resultDict)
 			}
 		}
-	} else {
+	} else if err == nil {
 		// Read the response and construct to string
 		if b, err := ioutil.ReadAll(resp); err == nil {
 			ParseCodeOwners(&b, repo, knownUsers, resultDict)
@@ -120,7 +120,7 @@ func ParseCodeOwners(b *[]byte, repo string, knownUsers map[string]bool, resultD
 					continue
 				}
 
-				if reviewersMap[word] != true {
+				if !reviewersMap[word] {
 					reviewers = append(reviewers, word)
 					reviewersMap[word] = true
 				}
@@ -128,7 +128,7 @@ func ParseCodeOwners(b *[]byte, repo string, knownUsers map[string]bool, resultD
 		}
 	}
 
-	if inputFileSupplied == false {
+	if !inputFileSupplied {
 		GenerateOwnerString(url, reviewers, resultDict)
 	}
 }
@@ -153,7 +153,6 @@ func ConvertToArray(resultDict map[string]string) [][]string {
 func WriteToCSV(records [][]string) {
 	fileNameFormatted := fmt.Sprintf("%s.csv", outputFile)
 	f, err := os.Create(fileNameFormatted)
-	defer f.Close()
 
 	if err != nil {
 
@@ -166,6 +165,8 @@ func WriteToCSV(records [][]string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	f.Close()
 }
 
 // ReadOwnersFile read file line by line and returns a slice
@@ -201,8 +202,8 @@ func ExecuteTask() {
 	repos := GetAllRepos(&ctx, client)
 
 	// repos := []string{
-	// 	// "event-stream",
-	// 	// "AV2Foundation",
+	// 	"event-stream",
+	// 	"AV2Foundation",
 	// }
 
 	var knownUsers map[string]bool
